@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+librosa
+soundfile
+numpy
+scipy
+python-multipart
+pydantic
+python-jose
+passlib[bcrypt]
+slowapi
+pytest
+httpx
