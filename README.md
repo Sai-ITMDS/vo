@@ -1,7 +1,7 @@
 Voice Obfuscation API – Enterprise Version
 
 Live Demo:
-https://voice-obfuscator.onrender.com/docs
+https://vo-xd2y.onrender.com
 
 Features:
 
