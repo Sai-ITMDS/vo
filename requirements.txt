@@ -1,9 +1,5 @@
 fastapi
 uvicorn
-librosa
-soundfile
-numpy
-scipy
 python-multipart
 python-jose
 passlib[bcrypt]
@@ -11,3 +7,10 @@ slowapi
 prometheus-client
 
 pydantic==1.10.15
+
+librosa
+soundfile
+numpy
+scipy
+noisereduce
+soxr
