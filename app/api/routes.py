@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import FileResponse
 from fastapi import Request
+from fastapi import BackgroundTasks
 import os
 
 from app.services.obfuscator import VoiceObfuscator
@@ -29,14 +30,14 @@ def token():
 
 
 
-
-
 @router.post("/obfuscate")
 @limiter.limit("5/minute")
 async def obfuscate(
-    request: Request, 
-    file: UploadFile = File(...)
+    request: Request,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
 ):
+
 
 
     if not file.filename.endswith((".wav", ".mp3")):
