@@ -1,17 +1,16 @@
 """
-Enterprise Voice Obfuscator
-ULTRA CLEAR VERSION
-Bank / Healthcare / Call Center Grade
+MAX CLARITY Voice Obfuscator
+McAdams Coefficient Method
+Production Grade
 """
 
 import librosa
 import numpy as np
 import soundfile as sf
-import logging
 import os
 import uuid
+import logging
 import traceback
-import noisereduce as nr
 
 
 logging.basicConfig(level=logging.INFO)
@@ -24,11 +23,9 @@ class VoiceObfuscator:
 
         self.target_sr = 16000
 
-        # SMALL shift = clear speech
-        self.pitch_shift = (-0.9, -0.4)
-
-        # embedding poison (NOT audible)
-        self.embed_noise = 0.000005
+        # McAdams coefficient
+        # 0.6–0.8 = BEST clarity + anonymization
+        self.mcadams = 0.7
 
 
     # ============================================================
@@ -37,10 +34,9 @@ class VoiceObfuscator:
 
     def obfuscate(self, input_path, output_dir="/tmp/outputs"):
 
-
         try:
 
-            logger.info("Loading")
+            logger.info("Loading audio")
 
             os.makedirs(output_dir, exist_ok=True)
 
@@ -51,76 +47,15 @@ class VoiceObfuscator:
             )
 
 
-            # ====================================================
-            # STEP 1 Light noise reduction
-            # ====================================================
+            logger.info("Running McAdams anonymization")
 
-            y = nr.reduce_noise(
-                y=y,
-                sr=sr,
-                prop_decrease=0.3
-            )
+            y_anonymized = self.mcadams_anonymize(y)
 
 
-            # ====================================================
-            # STEP 2 Normalize loudness
-            # ====================================================
+            logger.info("Normalizing")
 
-            y = self.normalize(y)
+            y_anonymized = self.normalize(y_anonymized)
 
-
-            # ====================================================
-            # STEP 3 Pitch shift (primary identity protection)
-            # ====================================================
-
-            shift = np.random.uniform(
-                self.pitch_shift[0],
-                self.pitch_shift[1]
-            )
-
-
-            logger.info(f"Pitch shift: {shift}")
-
-
-            y = librosa.effects.pitch_shift(
-                y,
-                sr=sr,
-                n_steps=shift,
-                res_type="soxr_vhq"
-            )
-
-
-            # ====================================================
-            # STEP 4 Vocal tract warping (CRITICAL STEP)
-            # ====================================================
-
-            y = self.vocal_warp(y)
-
-
-            # ====================================================
-            # STEP 5 Spectral smoothing (restore clarity)
-            # ====================================================
-
-            y = self.spectral_smooth(y)
-
-
-            # ====================================================
-            # STEP 6 Anti-cloning poison (INAUDIBLE)
-            # ====================================================
-
-            y = self.embed_protection(y)
-
-
-            # ====================================================
-            # FINAL NORMALIZE
-            # ====================================================
-
-            y = self.normalize(y)
-
-
-            # ====================================================
-            # SAVE
-            # ====================================================
 
             output_path = os.path.join(
                 output_dir,
@@ -130,13 +65,13 @@ class VoiceObfuscator:
 
             sf.write(
                 output_path,
-                y,
+                y_anonymized,
                 sr,
                 subtype="PCM_16"
             )
 
 
-            logger.info("Completed")
+            logger.info("SUCCESS")
 
             return output_path
 
@@ -150,56 +85,58 @@ class VoiceObfuscator:
 
 
     # ============================================================
-    # FUNCTIONS
+    # McAdams Method
     # ============================================================
 
+    def mcadams_anonymize(self, y):
+
+        frame_length = 512
+        hop_length = 256
+        order = 20
+
+        output = np.zeros_like(y)
+
+        for i in range(0, len(y) - frame_length, hop_length):
+
+            frame = y[i:i+frame_length]
+
+            lpc = librosa.lpc(frame, order)
+
+            roots = np.roots(lpc)
+
+            angles = np.angle(roots)
+
+            magnitudes = np.abs(roots)
+
+            angles = angles * self.mcadams
+
+            new_roots = magnitudes * np.exp(1j * angles)
+
+            new_lpc = np.real(np.poly(new_roots))
+
+            new_frame = librosa.lfilter(
+                [0] + -1 * new_lpc[1:].tolist(),
+                [1],
+                frame
+            )
+
+            output[i:i+frame_length] += new_frame
+
+
+        return output
+
+
+    # ============================================================
 
     def normalize(self, y):
 
-        return y / np.max(np.abs(y))
+        max_val = np.max(np.abs(y))
 
+        if max_val > 0:
 
-    def vocal_warp(self, y):
+            y = y / max_val
 
-        # vocal tract modification without destroying clarity
-
-        stft = librosa.stft(y)
-
-        magnitude, phase = librosa.magphase(stft)
-
-        warp = np.linspace(0.9, 1.1, magnitude.shape[0])
-
-        magnitude = magnitude * warp[:, None]
-
-        warped = magnitude * phase
-
-        return librosa.istft(warped)
-
-
-    def spectral_smooth(self, y):
-
-        stft = librosa.stft(y)
-
-        mag, phase = librosa.magphase(stft)
-
-        mag = librosa.decompose.nn_filter(
-            mag,
-            aggregate=np.median,
-            metric='cosine'
-        )
-
-        return librosa.istft(mag * phase)
-
-
-    def embed_protection(self, y):
-
-        noise = np.random.normal(
-            0,
-            self.embed_noise,
-            len(y)
-        )
-
-        return y + noise
+        return y
 
 
 
