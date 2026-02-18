@@ -5,9 +5,9 @@ soundfile
 numpy
 scipy
 python-multipart
-pydantic
 python-jose
 passlib[bcrypt]
 slowapi
-pytest
-httpx
+prometheus-client
+
+pydantic==1.10.15
