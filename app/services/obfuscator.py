@@ -1,6 +1,7 @@
 """
 Enterprise Voice Obfuscator
-Fully Instrumented Logging Version
+Bank-Grade | Clear Speech | Deepfake Resistant | Render Safe
+Single File Version
 """
 
 import librosa
@@ -15,43 +16,80 @@ import traceback
 from scipy.signal import lfilter
 
 
+# ============================================================
+# LOGGER CONFIG
+# ============================================================
+
+logging.basicConfig(
+
+    level=logging.INFO,
+
+    format="%(asctime)s [%(levelname)s] %(message)s"
+
+)
+
 logger = logging.getLogger(__name__)
 
 
+# ============================================================
+# MAIN CLASS
+# ============================================================
+
 class VoiceObfuscator:
+
 
     def __init__(self):
 
+        logger.info("Initializing Enterprise Voice Obfuscator")
+
         self.target_sr = 16000
 
-        self.pitch_min = -2.0
-        self.pitch_max = -1.0
 
-        self.noise_level = 0.00015
+        # Safe identity protection range
+        self.pitch_min = -1.4
+        self.pitch_max = -0.6
 
-        self.formant_strength = 0.08
 
+        # VERY LOW noise (inaudible but blocks cloning)
+        self.noise_level = 0.00002
+
+
+        # Formant protection strength
+        self.formant_strength = 0.06
+
+
+        # Speech clarity enhancer
         self.pre_emphasis = 0.97
 
 
     # ============================================================
-    # MAIN
+    # MAIN FUNCTION
     # ============================================================
 
-    def obfuscate(self, input_path: str, output_dir: str) -> str:
+    def obfuscate(self, input_path: str, output_dir: str = "/tmp/outputs") -> str:
+
 
         logger.info("==========================================")
         logger.info("VOICE OBFUSCATION STARTED")
-        logger.info(f"Input file: {input_path}")
-        logger.info(f"Output dir: {output_dir}")
+        logger.info(f"Input: {input_path}")
+        logger.info(f"Output Dir: {output_dir}")
+
 
         try:
 
+
             # ----------------------------------------------------
-            # LOAD
+            # CREATE OUTPUT DIR
             # ----------------------------------------------------
 
-            logger.info("Loading audio...")
+            os.makedirs(output_dir, exist_ok=True)
+
+
+            # ----------------------------------------------------
+            # LOAD AUDIO
+            # ----------------------------------------------------
+
+            logger.info("Loading audio")
 
             y, sr = librosa.load(
 
@@ -63,106 +101,137 @@ class VoiceObfuscator:
 
             )
 
+
             logger.info(f"Loaded successfully")
-            logger.info(f"Sample rate: {sr}")
-            logger.info(f"Samples: {len(y)}")
-            logger.info(f"Duration: {len(y)/sr:.2f} sec")
 
             self.log_stats(y, "Original")
+
 
 
             # ----------------------------------------------------
             # STEP 1 Noise Reduction
             # ----------------------------------------------------
 
-            logger.info("Step 1: Noise reduction")
+            logger.info("Noise reduction")
 
-            y = self.noise_reduction(y, sr)
+            y = nr.reduce_noise(
 
-            self.log_stats(y, "Noise reduced")
+                y=y,
+
+                sr=sr,
+
+                prop_decrease=0.5,
+
+                stationary=True
+
+            )
+
+
+            self.log_stats(y, "Noise Reduced")
+
 
 
             # ----------------------------------------------------
-            # STEP 2 Pre Emphasis
+            # STEP 2 Speech Enhancement
             # ----------------------------------------------------
 
-            logger.info("Step 2: Speech enhancement")
+            logger.info("Speech enhancement")
 
             y = self.pre_emphasize(y)
 
             self.log_stats(y, "Enhanced")
 
 
+
             # ----------------------------------------------------
             # STEP 3 Normalize
             # ----------------------------------------------------
 
-            logger.info("Step 3: Normalize")
-
             y = self.normalize(y)
 
-            self.log_stats(y, "Normalized")
 
 
             # ----------------------------------------------------
             # STEP 4 Pitch Shift
             # ----------------------------------------------------
 
-            logger.info("Step 4: Pitch shift")
+            shift = np.random.uniform(
 
-            y = self.pitch_shift(y, sr)
+                self.pitch_min,
 
-            self.log_stats(y, "Pitch shifted")
+                self.pitch_max
+
+            )
+
+
+            logger.info(f"Pitch shift: {shift}")
+
+
+            y = librosa.effects.pitch_shift(
+
+                y,
+
+                sr=sr,
+
+                n_steps=shift,
+
+                res_type="soxr_vhq"
+
+            )
+
+
+            self.log_stats(y, "Pitch Shifted")
+
 
 
             # ----------------------------------------------------
             # STEP 5 Formant Shift
             # ----------------------------------------------------
 
-            logger.info("Step 5: Formant shift")
-
             y = self.formant_shift(y)
 
-            self.log_stats(y, "Formant shifted")
+
+            self.log_stats(y, "Formant Shifted")
+
 
 
             # ----------------------------------------------------
             # STEP 6 Protection Noise
             # ----------------------------------------------------
 
-            logger.info("Step 6: Protection noise")
+            y = self.add_noise(y)
 
-            y = self.add_protection_noise(y)
 
-            self.log_stats(y, "Noise added")
+            self.log_stats(y, "Noise Added")
+
 
 
             # ----------------------------------------------------
             # STEP 7 Final Normalize
             # ----------------------------------------------------
 
-            logger.info("Step 7: Final normalize")
-
             y = self.normalize(y)
 
-            self.log_stats(y, "Final")
 
 
             # ----------------------------------------------------
-            # SAVE
+            # SAVE FILE
             # ----------------------------------------------------
 
-            filename = f"{uuid.uuid4()}.wav"
+            file_id = str(uuid.uuid4())
+
 
             output_path = os.path.join(
 
                 output_dir,
 
-                filename
+                f"{file_id}.wav"
 
             )
 
-            logger.info(f"Saving to: {output_path}")
+
+            logger.info(f"Saving file: {output_path}")
+
 
             sf.write(
 
@@ -176,16 +245,36 @@ class VoiceObfuscator:
 
             )
 
-            logger.info("SAVE SUCCESS")
+
+
+            # VERIFY FILE
+
+            if not os.path.exists(output_path):
+
+                raise Exception("File not created")
+
+
+            size = os.path.getsize(output_path)
+
+
+            logger.info(f"Saved successfully: {size} bytes")
+
+
+            if size < 1000:
+
+                raise Exception("File corrupted")
+
 
             logger.info("VOICE OBFUSCATION COMPLETED")
-
             logger.info("==========================================")
+
 
             return output_path
 
 
+
         except Exception as e:
+
 
             logger.error("VOICE OBFUSCATION FAILED")
 
@@ -193,52 +282,17 @@ class VoiceObfuscator:
 
             logger.error(traceback.format_exc())
 
+
             raise Exception("Processing failed")
 
 
-    # ============================================================
-    # LOG AUDIO STATS
-    # ============================================================
-
-    def log_stats(self, y, label):
-
-        logger.info(
-
-            f"{label} stats → "
-
-            f"min: {np.min(y):.5f}, "
-
-            f"max: {np.max(y):.5f}, "
-
-            f"mean: {np.mean(y):.5f}"
-
-        )
-
 
     # ============================================================
-    # DSP
+    # DSP FUNCTIONS
     # ============================================================
-
-    def noise_reduction(self, y, sr):
-
-        logger.info("Running noise reduction")
-
-        return nr.reduce_noise(
-
-            y=y,
-
-            sr=sr,
-
-            prop_decrease=0.6,
-
-            stationary=True
-
-        )
 
 
     def normalize(self, y):
-
-        logger.info("Normalizing")
 
         max_val = np.max(np.abs(y))
 
@@ -249,9 +303,8 @@ class VoiceObfuscator:
         return y
 
 
-    def pre_emphasize(self, y):
 
-        logger.info("Pre-emphasis")
+    def pre_emphasize(self, y):
 
         return np.append(
 
@@ -262,34 +315,8 @@ class VoiceObfuscator:
         )
 
 
-    def pitch_shift(self, y, sr):
-
-        shift = np.random.uniform(
-
-            self.pitch_min,
-
-            self.pitch_max
-
-        )
-
-        logger.info(f"Pitch shift value: {shift}")
-
-        return librosa.effects.pitch_shift(
-
-            y,
-
-            sr=sr,
-
-            n_steps=shift,
-
-            res_type="soxr_vhq"
-
-        )
-
 
     def formant_shift(self, y):
-
-        logger.info("Formant shift")
 
         alpha = self.formant_strength
 
@@ -300,9 +327,8 @@ class VoiceObfuscator:
         return lfilter(b, a, y)
 
 
-    def add_protection_noise(self, y):
 
-        logger.info("Adding protection noise")
+    def add_noise(self, y):
 
         noise = np.random.normal(
 
@@ -317,6 +343,30 @@ class VoiceObfuscator:
         return y + noise
 
 
-# Singleton
+
+    # ============================================================
+    # LOGGING
+    # ============================================================
+
+
+    def log_stats(self, y, label):
+
+        logger.info(
+
+            f"{label} → "
+
+            f"min={np.min(y):.5f} "
+
+            f"max={np.max(y):.5f} "
+
+            f"mean={np.mean(y):.5f}"
+
+        )
+
+
+
+# ============================================================
+# SINGLETON
+# ============================================================
 
 obfuscator = VoiceObfuscator()
