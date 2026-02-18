@@ -4,7 +4,11 @@
 
 
 **Live Demo**:
-https://vo-xd2y.onrender.com/docs - select obsfuscate, upload audio file
+https://vo-xd2y.onrender.com/docs
+
+1. https://vo-xd2y.onrender.com/token - generate token
+
+2. select obsfuscate, upload audio file
 *Note: First time the server may boot and could take couple of mins. Subsequent requests will be served in <5 seconds*
 
 **Metrics**:
