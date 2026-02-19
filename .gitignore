@@ -76,12 +76,3 @@ outputs/
 # Ignore system files
 Thumbs.db
 Desktop.ini
-
-# Ignore all files except source code and config
-!requirements.txt
-!Dockerfile
-!README.md
-!main.py
-!app/
-!tests/
-!Assignment Details.md
