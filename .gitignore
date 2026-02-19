@@ -68,6 +68,8 @@ outputs/
 # Ignore environment files
 .env
 .env.*
+venv
+outputs
 
 # Ignore test result files
 *.out
@@ -76,3 +78,13 @@ outputs/
 # Ignore system files
 Thumbs.db
 Desktop.ini
+
+# Ignore Python virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Ignore large files and site-packages
+**/site-packages/
+*.dylib
